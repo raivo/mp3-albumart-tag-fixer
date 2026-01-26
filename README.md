@@ -28,7 +28,11 @@ A desktop application for managing MP3 file metadata and automatically fetching 
 
 ## Screenshots
 
-*Coming soon*
+**Main Window** - Edit metadata and view album artwork
+![Main Window](screenshots/main-window.png)
+
+**Artwork Picker** - Choose from multiple artwork sources
+![Artwork Picker](screenshots/artwork-picker.png)
 
 ## Installation
 
