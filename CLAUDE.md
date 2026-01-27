@@ -43,11 +43,19 @@ MP3 tag editor desktop application with PySide6 GUI. Fetches album artwork from 
 - **Cache**: diskcache
 
 ## Code Conventions
-- Estonian language in UI strings and user-facing messages
+- **Bilingual UI**: Estonian and English supported via `utils/translations.py`
+- Use `tr('key')` function for all user-facing strings
 - English in code (variable names, comments, docstrings)
 - Type hints used throughout
 - Dataclasses for models (Track, Album)
 - Config stored in ~/.mp3_tag_editor/
+
+## Translation System
+- All translations in `utils/translations.py` → `TRANSLATIONS` dict
+- Use `tr('key')` or `tr('key', param=value)` for formatted strings
+- Language switcher in top-right corner of main window
+- System language auto-detected on first run
+- Language preference saved to config
 
 ## Known Limitations
 - Only MP3 files supported (no FLAC, OGG, etc.)
@@ -67,6 +75,12 @@ MP3 tag editor desktop application with PySide6 GUI. Fetches album artwork from 
 1. Edit `parsers/patterns.py`
 2. Add regex pattern to `FILENAME_PATTERNS` list
 3. Test with various filename formats
+
+### Adding new UI strings
+1. Add key to both 'et' and 'en' dicts in `utils/translations.py`
+2. Use `tr('new_key')` in GUI code
+3. For dynamic text: `tr('key_with_param', value=42)`
+4. Add `update_translations()` method to widget if language can change at runtime
 
 ## Testing
 No tests yet. Would benefit from:
