@@ -22,6 +22,7 @@ from .conflict_dialog import ConflictDialog, BatchConflictDialog
 from .artwork_picker import ArtworkPickerDialog
 from .preview_dialog import PreviewDialog
 from config import get_config
+from utils.translations import tr
 
 
 class AnalysisWorker(QObject):
@@ -75,11 +76,11 @@ class DirectoryView(QWidget):
         # Directory selection
         dir_layout = QHBoxLayout()
 
-        self.dir_label = QLabel("Kataloogi pole valitud")
+        self.dir_label = QLabel(tr('no_directory_selected'))
         self.dir_label.setStyleSheet("font-weight: bold;")
         dir_layout.addWidget(self.dir_label, stretch=1)
 
-        self.browse_btn = QPushButton("Vali kataloog...")
+        self.browse_btn = QPushButton(tr('select_directory'))
         self.browse_btn.clicked.connect(self._on_browse)
         dir_layout.addWidget(self.browse_btn)
 
@@ -91,23 +92,23 @@ class DirectoryView(QWidget):
         layout.addWidget(self.progress_bar)
 
         # Album info
-        self.album_info = QGroupBox("Albumi info")
-        album_layout = QHBoxLayout(self.album_info)
+        self.album_info_group = QGroupBox(tr('album_info'))
+        album_layout = QHBoxLayout(self.album_info_group)
 
-        self.artist_label = QLabel("Esitaja: -")
-        album_layout.addWidget(self.artist_label)
+        self.artist_info_label = QLabel(tr('artist_label', value='-'))
+        album_layout.addWidget(self.artist_info_label)
 
-        self.album_label = QLabel("Album: -")
-        album_layout.addWidget(self.album_label)
+        self.album_info_label = QLabel(tr('album_label', value='-'))
+        album_layout.addWidget(self.album_info_label)
 
-        self.year_label = QLabel("Aasta: -")
-        album_layout.addWidget(self.year_label)
+        self.year_info_label = QLabel(tr('year_label', value='-'))
+        album_layout.addWidget(self.year_info_label)
 
-        self.count_label = QLabel("Lugusid: -")
+        self.count_label = QLabel(tr('tracks_label', value='-'))
         album_layout.addWidget(self.count_label)
 
         album_layout.addStretch()
-        layout.addWidget(self.album_info)
+        layout.addWidget(self.album_info_group)
 
         # Main content (splitter)
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -139,20 +140,20 @@ class DirectoryView(QWidget):
         # Buttons
         button_layout = QHBoxLayout()
 
-        self.resolve_btn = QPushButton("Lahenda konfliktid")
+        self.resolve_btn = QPushButton(tr('resolve_conflicts_btn'))
         self.resolve_btn.clicked.connect(self._on_resolve_conflicts)
         self.resolve_btn.setEnabled(False)
         button_layout.addWidget(self.resolve_btn)
 
-        self.apply_album_btn = QPushButton("Rakenda kõigile")
+        self.apply_album_btn = QPushButton(tr('apply_to_all'))
         self.apply_album_btn.clicked.connect(self._on_apply_to_all)
         self.apply_album_btn.setEnabled(False)
-        self.apply_album_btn.setToolTip("Rakenda praegused metaandmed kõigile lugudele")
+        self.apply_album_btn.setToolTip(tr('apply_to_all_tooltip'))
         button_layout.addWidget(self.apply_album_btn)
 
         button_layout.addStretch()
 
-        self.save_btn = QPushButton("Salvesta kõik")
+        self.save_btn = QPushButton(tr('save_all'))
         self.save_btn.clicked.connect(self._on_save_all)
         self.save_btn.setEnabled(False)
         self.save_btn.setStyleSheet("background-color: #4CAF50; color: white;")
@@ -164,7 +165,7 @@ class DirectoryView(QWidget):
         """Handle browse button click."""
         directory = QFileDialog.getExistingDirectory(
             self,
-            "Vali kataloog MP3 failidega",
+            tr('select_directory_mp3'),
             ""
         )
 
@@ -174,11 +175,11 @@ class DirectoryView(QWidget):
     def load_directory(self, directory: Path):
         """Load and analyze a directory of MP3 files."""
         if not directory.exists():
-            QMessageBox.warning(self, "Viga", f"Kataloogi ei leitud: {directory}")
+            QMessageBox.warning(self, tr('error'), f"{tr('directory_not_found')}: {directory}")
             return
 
         self.dir_label.setText(directory.name)
-        self.status_label.setText("Analüüsin faile...")
+        self.status_label.setText(tr('analyzing_files'))
         self.progress_bar.show()
         self.progress_bar.setValue(0)
 
@@ -194,8 +195,8 @@ class DirectoryView(QWidget):
 
             if not self._current_album.tracks:
                 QMessageBox.information(
-                    self, "Info",
-                    "Kataloogis ei leitud MP3 faile."
+                    self, tr('info'),
+                    tr('no_mp3_files')
                 )
                 self.progress_bar.hide()
                 return
@@ -219,17 +220,17 @@ class DirectoryView(QWidget):
             if tracks_with_conflicts:
                 self.resolve_btn.setEnabled(True)
                 self.status_label.setText(
-                    f"Leiti {len(tracks_with_conflicts)} faili konfliktidega"
+                    tr('files_with_conflicts', count=len(tracks_with_conflicts))
                 )
             else:
-                self.status_label.setText(f"Laetud {len(self._current_album.tracks)} faili")
+                self.status_label.setText(tr('loaded_files', count=len(self._current_album.tracks)))
 
             self.apply_album_btn.setEnabled(True)
             self.save_btn.setEnabled(True)
 
         except Exception as e:
-            QMessageBox.critical(self, "Viga", f"Kataloogi analüüsimine ebaõnnestus: {e}")
-            self.status_label.setText(f"Viga: {e}")
+            QMessageBox.critical(self, tr('error'), f"{tr('directory_analysis_failed')}: {e}")
+            self.status_label.setText(f"{tr('error')}: {e}")
 
         finally:
             self.progress_bar.hide()
@@ -240,10 +241,10 @@ class DirectoryView(QWidget):
             return
 
         album = self._current_album
-        self.artist_label.setText(f"Esitaja: {album.artist or '-'}")
-        self.album_label.setText(f"Album: {album.album_name or '-'}")
-        self.year_label.setText(f"Aasta: {album.year or '-'}")
-        self.count_label.setText(f"Lugusid: {album.track_count}")
+        self.artist_info_label.setText(tr('artist_label', value=album.artist or '-'))
+        self.album_info_label.setText(tr('album_label', value=album.album_name or '-'))
+        self.year_info_label.setText(tr('year_label', value=album.year or '-'))
+        self.count_label.setText(tr('tracks_label', value=album.track_count))
 
     def _on_file_selected(self, track: Track):
         """Handle file selection."""
@@ -256,7 +257,7 @@ class DirectoryView(QWidget):
         """Handle tag changes."""
         self.file_list.update_track(track)
         self._update_save_button()
-        self.status_label.setText("Muudatused salvestamata")
+        self.status_label.setText(tr('changes_unsaved'))
 
     def _on_artwork_selected(self, artwork_data: bytes):
         """Handle artwork selection."""
@@ -288,7 +289,7 @@ class DirectoryView(QWidget):
 
         # If URL provided, download directly
         if url_or_artist.startswith('http'):
-            self.status_label.setText("Laen pilti...")
+            self.status_label.setText(tr('loading_image'))
             try:
                 from artwork.providers.base import ArtworkResult
                 result = ArtworkResult(image_url=url_or_artist, source=source_or_album)
@@ -298,7 +299,7 @@ class DirectoryView(QWidget):
                     self._on_artwork_selected(image_data)
                 self.status_label.setText("")
             except Exception as e:
-                self.status_label.setText(f"Viga: {e}")
+                self.status_label.setText(f"{tr('error')}: {e}")
             return
 
         # Open artwork picker dialog
@@ -309,8 +310,8 @@ class DirectoryView(QWidget):
                 # Ask if should apply to all tracks
                 reply = QMessageBox.question(
                     self,
-                    "Rakenda kõigile?",
-                    "Kas soovid selle pildi rakendada kõigile lugudele albumis?",
+                    tr('apply_artwork_to_all'),
+                    tr('apply_artwork_to_all_msg'),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
 
@@ -337,8 +338,8 @@ class DirectoryView(QWidget):
 
         if not tracks_with_conflicts:
             QMessageBox.information(
-                self, "Info",
-                "Konflikte ei leitud."
+                self, tr('info'),
+                tr('no_conflicts')
             )
             return
 
@@ -365,16 +366,15 @@ class DirectoryView(QWidget):
         current_track = self.file_list.get_selected_track()
         if not current_track or not current_track.resolved_info:
             QMessageBox.warning(
-                self, "Hoiatus",
-                "Palun vali kõigepealt lugu ja täida metaandmed."
+                self, tr('warning'),
+                tr('select_track_first')
             )
             return
 
         reply = QMessageBox.question(
             self,
-            "Kinnitus",
-            "Kas oled kindel, et soovid praeguse loo albumi, "
-            "esitaja ja aasta info rakendada kõigile lugudele?",
+            tr('confirmation'),
+            tr('apply_all_confirm'),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
@@ -383,7 +383,7 @@ class DirectoryView(QWidget):
             self._current_album.apply_to_all_tracks(info)
             self.file_list._refresh_list()
             self._update_save_button()
-            self.status_label.setText("Info rakendatud kõigile lugudele")
+            self.status_label.setText(tr('info_applied_to_all'))
 
     def _update_save_button(self):
         """Update save button state."""
@@ -399,8 +399,8 @@ class DirectoryView(QWidget):
         tracks_with_changes = self._current_album.get_tracks_with_changes()
         if not tracks_with_changes:
             QMessageBox.information(
-                self, "Info",
-                "Muudatusi pole salvestada."
+                self, tr('info'),
+                tr('no_changes_to_save')
             )
             return
 
@@ -415,7 +415,7 @@ class DirectoryView(QWidget):
             return
 
         # Save changes
-        self.status_label.setText("Salvestan...")
+        self.status_label.setText(tr('saving'))
         self.progress_bar.show()
         self.progress_bar.setRange(0, len(tracks_with_changes))
 
@@ -443,20 +443,33 @@ class DirectoryView(QWidget):
         if error_count > 0:
             QMessageBox.warning(
                 self,
-                "Hoiatus",
-                f"Salvestatud {success_count} faili.\n"
-                f"Vigu: {error_count}"
+                tr('warning'),
+                tr('saved_with_errors', success=success_count, errors=error_count)
             )
         else:
             QMessageBox.information(
                 self,
-                "Valmis",
-                f"Salvestatud {success_count} faili."
+                tr('done'),
+                tr('saved_files', count=success_count)
             )
 
-        self.status_label.setText(f"Salvestatud {success_count} faili")
+        self.status_label.setText(tr('saved_files', count=success_count))
         self.directory_saved.emit(self._current_album)
 
     def get_current_album(self) -> Optional[Album]:
         """Get the current album."""
         return self._current_album
+
+    def update_translations(self):
+        """Update all translatable text."""
+        if not self._current_album:
+            self.dir_label.setText(tr('no_directory_selected'))
+        self.browse_btn.setText(tr('select_directory'))
+        self.album_info_group.setTitle(tr('album_info'))
+        self._update_album_info()
+        self.resolve_btn.setText(tr('resolve_conflicts_btn'))
+        self.apply_album_btn.setText(tr('apply_to_all'))
+        self.apply_album_btn.setToolTip(tr('apply_to_all_tooltip'))
+        self.save_btn.setText(tr('save_all'))
+        self.tag_editor.update_translations()
+        self.artwork_preview.update_translations()

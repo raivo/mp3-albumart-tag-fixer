@@ -32,6 +32,7 @@ class AppConfig:
     # UI settings
     show_preview: bool = True  # Show preview before applying changes
     dark_mode: bool = False
+    language: str = ""  # Empty = auto-detect from system
 
     # Fingerprinting
     use_fingerprinting: bool = True
@@ -81,6 +82,7 @@ def load_config() -> AppConfig:
                 cache_ttl_days=data.get('cache_ttl_days', 7),
                 show_preview=data.get('show_preview', True),
                 dark_mode=data.get('dark_mode', False),
+                language=data.get('language', ''),
                 use_fingerprinting=data.get('use_fingerprinting', True)
             )
         except (json.JSONDecodeError, KeyError):
@@ -105,6 +107,7 @@ def save_config(config: AppConfig) -> None:
         'cache_ttl_days': config.cache_ttl_days,
         'show_preview': config.show_preview,
         'dark_mode': config.dark_mode,
+        'language': config.language,
         'use_fingerprinting': config.use_fingerprinting
     }
 

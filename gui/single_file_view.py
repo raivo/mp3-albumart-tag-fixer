@@ -19,6 +19,7 @@ from .conflict_dialog import ConflictDialog
 from .artwork_picker import ArtworkPickerDialog
 from .preview_dialog import PreviewDialog
 from config import get_config
+from utils.translations import tr
 
 
 class SingleFileView(QWidget):
@@ -42,11 +43,11 @@ class SingleFileView(QWidget):
         # File selection
         file_layout = QHBoxLayout()
 
-        self.file_label = QLabel("Faili pole valitud")
+        self.file_label = QLabel(tr('no_file_selected'))
         self.file_label.setStyleSheet("font-weight: bold;")
         file_layout.addWidget(self.file_label, stretch=1)
 
-        self.browse_btn = QPushButton("Vali fail...")
+        self.browse_btn = QPushButton(tr('select_file'))
         self.browse_btn.clicked.connect(self._on_browse)
         file_layout.addWidget(self.browse_btn)
 
@@ -82,14 +83,14 @@ class SingleFileView(QWidget):
         # Buttons
         button_layout = QHBoxLayout()
 
-        self.analyze_btn = QPushButton("Analüüsi uuesti")
+        self.analyze_btn = QPushButton(tr('analyze_again'))
         self.analyze_btn.clicked.connect(self._on_analyze)
         self.analyze_btn.setEnabled(False)
         button_layout.addWidget(self.analyze_btn)
 
         button_layout.addStretch()
 
-        self.save_btn = QPushButton("Salvesta")
+        self.save_btn = QPushButton(tr('save'))
         self.save_btn.clicked.connect(self._on_save)
         self.save_btn.setEnabled(False)
         self.save_btn.setStyleSheet("background-color: #4CAF50; color: white;")
@@ -101,9 +102,9 @@ class SingleFileView(QWidget):
         """Handle browse button click."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Vali MP3 fail",
+            tr('select_mp3_file'),
             "",
-            "MP3 failid (*.mp3);;Kõik failid (*)"
+            f"{tr('mp3_files')};;{tr('all_files')}"
         )
 
         if file_path:
@@ -112,11 +113,11 @@ class SingleFileView(QWidget):
     def load_file(self, file_path: Path):
         """Load and analyze an MP3 file."""
         if not file_path.exists():
-            QMessageBox.warning(self, "Viga", f"Faili ei leitud: {file_path}")
+            QMessageBox.warning(self, tr('error'), f"{tr('file_not_found')}: {file_path}")
             return
 
         self.file_label.setText(file_path.name)
-        self.status_label.setText("Analüüsin faili...")
+        self.status_label.setText(tr('analyzing_file'))
         self.progress_bar.show()
         self.progress_bar.setRange(0, 0)  # Indeterminate
 
@@ -140,11 +141,11 @@ class SingleFileView(QWidget):
 
             self.analyze_btn.setEnabled(True)
             self.save_btn.setEnabled(True)
-            self.status_label.setText("Fail laetud")
+            self.status_label.setText(tr('file_loaded'))
 
         except Exception as e:
-            QMessageBox.critical(self, "Viga", f"Faili analüüsimine ebaõnnestus: {e}")
-            self.status_label.setText(f"Viga: {e}")
+            QMessageBox.critical(self, tr('error'), f"{tr('analysis_failed')}: {e}")
+            self.status_label.setText(f"{tr('error')}: {e}")
 
         finally:
             self.progress_bar.hide()
@@ -170,7 +171,7 @@ class SingleFileView(QWidget):
         """Handle tag changes."""
         self._current_track = track
         self.save_btn.setEnabled(True)
-        self.status_label.setText("Muudatused salvestamata")
+        self.status_label.setText(tr('changes_unsaved'))
 
     def _on_artwork_selected(self, artwork_data: bytes):
         """Handle artwork selection."""
@@ -181,7 +182,7 @@ class SingleFileView(QWidget):
                 self._current_track.new_artwork = b''  # Mark for removal
             self._current_track.has_changes = True
             self.save_btn.setEnabled(True)
-            self.status_label.setText("Muudatused salvestamata")
+            self.status_label.setText(tr('changes_unsaved'))
 
     def _on_artwork_search(self, url_or_artist: str, source_or_album: str):
         """Handle artwork search request."""
@@ -196,7 +197,7 @@ class SingleFileView(QWidget):
 
         # If URL provided, download directly
         if url_or_artist.startswith('http'):
-            self.status_label.setText("Laen pilti...")
+            self.status_label.setText(tr('loading_image'))
             try:
                 # Find provider by source name
                 from artwork.providers.base import ArtworkResult
@@ -207,7 +208,7 @@ class SingleFileView(QWidget):
                     self._on_artwork_selected(image_data)
                 self.status_label.setText("")
             except Exception as e:
-                self.status_label.setText(f"Viga: {e}")
+                self.status_label.setText(f"{tr('error')}: {e}")
             return
 
         # Open artwork picker dialog
@@ -229,14 +230,14 @@ class SingleFileView(QWidget):
             if not dialog.exec():
                 return
 
-        self.status_label.setText("Salvestan...")
+        self.status_label.setText(tr('saving'))
         self.save_btn.setEnabled(False)
 
         try:
             success = self.analyzer.apply_changes(self._current_track)
 
             if success:
-                self.status_label.setText("Salvestatud!")
+                self.status_label.setText(tr('saved'))
                 self._current_track.has_changes = False
                 self.file_saved.emit(self._current_track)
 
@@ -246,14 +247,24 @@ class SingleFileView(QWidget):
                 self.artwork_preview.set_artwork(self._current_track.current_artwork)
 
             else:
-                self.status_label.setText("Salvestamine ebaõnnestus")
+                self.status_label.setText(tr('save_failed'))
                 self.save_btn.setEnabled(True)
 
         except Exception as e:
-            QMessageBox.critical(self, "Viga", f"Salvestamine ebaõnnestus: {e}")
-            self.status_label.setText(f"Viga: {e}")
+            QMessageBox.critical(self, tr('error'), f"{tr('save_failed')}: {e}")
+            self.status_label.setText(f"{tr('error')}: {e}")
             self.save_btn.setEnabled(True)
 
     def get_current_track(self) -> Optional[Track]:
         """Get the current track."""
         return self._current_track
+
+    def update_translations(self):
+        """Update all translatable text."""
+        if not self._current_track:
+            self.file_label.setText(tr('no_file_selected'))
+        self.browse_btn.setText(tr('select_file'))
+        self.analyze_btn.setText(tr('analyze_again'))
+        self.save_btn.setText(tr('save'))
+        self.tag_editor.update_translations()
+        self.artwork_preview.update_translations()

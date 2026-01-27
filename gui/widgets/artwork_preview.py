@@ -13,6 +13,7 @@ from PySide6.QtGui import QPixmap, QImage
 
 from models.track import Track
 from artwork.providers.base import ArtworkResult
+from utils.translations import tr
 
 
 class ArtworkPreviewWidget(QWidget):
@@ -32,9 +33,9 @@ class ArtworkPreviewWidget(QWidget):
         layout = QVBoxLayout(self)
 
         # Title
-        title = QLabel("Albumi kaanepilt")
-        title.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(title)
+        self.title_label = QLabel(tr('album_artwork'))
+        self.title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        layout.addWidget(self.title_label)
 
         # Current artwork display
         self.current_frame = QFrame()
@@ -46,7 +47,7 @@ class ArtworkPreviewWidget(QWidget):
 
         self.artwork_label = QLabel()
         self.artwork_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.artwork_label.setText("Pilt puudub")
+        self.artwork_label.setText(tr('no_image'))
         self.artwork_label.setStyleSheet("color: gray;")
         frame_layout.addWidget(self.artwork_label)
 
@@ -61,22 +62,22 @@ class ArtworkPreviewWidget(QWidget):
         # Buttons
         button_layout = QHBoxLayout()
 
-        self.search_btn = QPushButton("Otsi pilte")
+        self.search_btn = QPushButton(tr('search_images'))
         self.search_btn.clicked.connect(self._on_search_clicked)
         button_layout.addWidget(self.search_btn)
 
-        self.browse_btn = QPushButton("Vali fail...")
+        self.browse_btn = QPushButton(tr('select_file_btn'))
         self.browse_btn.clicked.connect(self._on_browse_clicked)
         button_layout.addWidget(self.browse_btn)
 
-        self.remove_btn = QPushButton("Eemalda")
+        self.remove_btn = QPushButton(tr('remove'))
         self.remove_btn.clicked.connect(self._on_remove_clicked)
         button_layout.addWidget(self.remove_btn)
 
         layout.addLayout(button_layout)
 
         # Search results area
-        self.results_label = QLabel("Otsingutulemused:")
+        self.results_label = QLabel(tr('search_results'))
         self.results_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
         self.results_label.hide()
         layout.addWidget(self.results_label)
@@ -114,10 +115,10 @@ class ArtworkPreviewWidget(QWidget):
                 img = QImage.fromData(artwork_data)
                 self.info_label.setText(f"{img.width()}x{img.height()} px")
             else:
-                self.artwork_label.setText("Vigane pilt")
+                self.artwork_label.setText(tr('invalid_image'))
                 self.info_label.setText("")
         else:
-            self.artwork_label.setText("Pilt puudub")
+            self.artwork_label.setText(tr('no_image'))
             self.artwork_label.setPixmap(QPixmap())
             self.info_label.setText("")
 
@@ -203,9 +204,9 @@ class ArtworkPreviewWidget(QWidget):
         """Handle browse button click."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Vali kaanepilt",
+            tr('select_image'),
             "",
-            "Pildifailid (*.jpg *.jpeg *.png *.gif *.bmp);;Kõik failid (*)"
+            f"{tr('image_files')};;{tr('all_files')}"
         )
 
         if file_path:
@@ -216,7 +217,7 @@ class ArtworkPreviewWidget(QWidget):
                 self.set_artwork(image_data)
                 self.artwork_selected.emit(image_data)
             except Exception as e:
-                QMessageBox.warning(self, "Viga", f"Pildi laadimine ebaõnnestus: {e}")
+                QMessageBox.warning(self, tr('error'), f"{tr('image_load_failed')}: {e}")
 
     def _on_remove_clicked(self):
         """Handle remove button click."""
@@ -241,3 +242,13 @@ class ArtworkPreviewWidget(QWidget):
         """Clear the widget."""
         self.set_artwork(None)
         self.set_search_results([])
+
+    def update_translations(self):
+        """Update all translatable text."""
+        self.title_label.setText(tr('album_artwork'))
+        self.search_btn.setText(tr('search_images'))
+        self.browse_btn.setText(tr('select_file_btn'))
+        self.remove_btn.setText(tr('remove'))
+        self.results_label.setText(tr('search_results'))
+        if not self._current_artwork:
+            self.artwork_label.setText(tr('no_image'))

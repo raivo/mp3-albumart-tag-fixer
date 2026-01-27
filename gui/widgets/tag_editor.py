@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from models.track import Track, TrackInfo, InfoSource
+from utils.translations import tr
 
 
 class TagEditorWidget(QWidget):
@@ -27,38 +28,42 @@ class TagEditorWidget(QWidget):
         layout = QVBoxLayout(self)
 
         # Title
-        title = QLabel("Metaandmed")
-        title.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(title)
+        self.title_label = QLabel(tr('metadata'))
+        self.title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        layout.addWidget(self.title_label)
 
         # Form for metadata
-        form_group = QGroupBox("Tag info")
-        form_layout = QFormLayout(form_group)
+        self.form_group = QGroupBox(tr('tag_info'))
+        self.form_layout = QFormLayout(self.form_group)
 
         # Artist
         self.artist_edit = QLineEdit()
-        self.artist_edit.setPlaceholderText("Esitaja nimi")
+        self.artist_edit.setPlaceholderText(tr('artist_placeholder'))
         self.artist_edit.textChanged.connect(self._on_field_changed)
-        form_layout.addRow("Esitaja:", self.artist_edit)
+        self.artist_label = QLabel(tr('artist') + ":")
+        self.form_layout.addRow(self.artist_label, self.artist_edit)
 
         # Title
         self.title_edit = QLineEdit()
-        self.title_edit.setPlaceholderText("Loo pealkiri")
+        self.title_edit.setPlaceholderText(tr('title_placeholder'))
         self.title_edit.textChanged.connect(self._on_field_changed)
-        form_layout.addRow("Pealkiri:", self.title_edit)
+        self.title_field_label = QLabel(tr('title') + ":")
+        self.form_layout.addRow(self.title_field_label, self.title_edit)
 
         # Album
         self.album_edit = QLineEdit()
-        self.album_edit.setPlaceholderText("Albumi nimi")
+        self.album_edit.setPlaceholderText(tr('album_placeholder'))
         self.album_edit.textChanged.connect(self._on_field_changed)
-        form_layout.addRow("Album:", self.album_edit)
+        self.album_label = QLabel(tr('album') + ":")
+        self.form_layout.addRow(self.album_label, self.album_edit)
 
         # Year
         self.year_spin = QSpinBox()
         self.year_spin.setRange(0, 2030)
-        self.year_spin.setSpecialValueText("Pole määratud")
+        self.year_spin.setSpecialValueText(tr('year_not_set'))
         self.year_spin.valueChanged.connect(self._on_field_changed)
-        form_layout.addRow("Aasta:", self.year_spin)
+        self.year_label = QLabel(tr('year') + ":")
+        self.form_layout.addRow(self.year_label, self.year_spin)
 
         # Track number
         track_layout = QHBoxLayout()
@@ -77,7 +82,8 @@ class TagEditorWidget(QWidget):
         track_layout.addWidget(self.total_tracks_spin)
         track_layout.addStretch()
 
-        form_layout.addRow("Lugu:", track_layout)
+        self.track_label = QLabel(tr('track') + ":")
+        self.form_layout.addRow(self.track_label, track_layout)
 
         # Genre
         self.genre_combo = QComboBox()
@@ -89,12 +95,13 @@ class TagEditorWidget(QWidget):
             "Techno", "Trance", "Ambient", "Alternative", "Indie"
         ])
         self.genre_combo.currentTextChanged.connect(self._on_field_changed)
-        form_layout.addRow("Žanr:", self.genre_combo)
+        self.genre_label = QLabel(tr('genre') + ":")
+        self.form_layout.addRow(self.genre_label, self.genre_combo)
 
-        layout.addWidget(form_group)
+        layout.addWidget(self.form_group)
 
         # Source info
-        self.source_group = QGroupBox("Andmeallikad")
+        self.source_group = QGroupBox(tr('data_sources'))
         source_layout = QVBoxLayout(self.source_group)
         self.source_labels = {}
 
@@ -110,11 +117,11 @@ class TagEditorWidget(QWidget):
         # Buttons
         button_layout = QHBoxLayout()
 
-        self.reset_btn = QPushButton("Lähtesta")
+        self.reset_btn = QPushButton(tr('reset'))
         self.reset_btn.clicked.connect(self._on_reset)
         button_layout.addWidget(self.reset_btn)
 
-        self.apply_btn = QPushButton("Rakenda")
+        self.apply_btn = QPushButton(tr('apply'))
         self.apply_btn.clicked.connect(self._on_apply)
         self.apply_btn.setStyleSheet("background-color: #4CAF50; color: white;")
         button_layout.addWidget(self.apply_btn)
@@ -197,35 +204,35 @@ class TagEditorWidget(QWidget):
         # Tag info
         if track.tag_info and track.tag_info.artist:
             self.source_labels['tag'].setText(
-                f"Tag: {track.tag_info.artist} - {track.tag_info.title or '?'}"
+                f"{tr('source_tag')}: {track.tag_info.artist} - {track.tag_info.title or '?'}"
             )
         else:
-            self.source_labels['tag'].setText("Tag: (puudub)")
+            self.source_labels['tag'].setText(f"{tr('source_tag')}: {tr('missing')}")
 
         # Filename info
         if track.filename_info and track.filename_info.artist:
             self.source_labels['filename'].setText(
-                f"Failinimi: {track.filename_info.artist} - {track.filename_info.title or '?'}"
+                f"{tr('source_filename')}: {track.filename_info.artist} - {track.filename_info.title or '?'}"
             )
         else:
-            self.source_labels['filename'].setText(f"Failinimi: {track.filename}")
+            self.source_labels['filename'].setText(f"{tr('source_filename')}: {track.filename}")
 
         # Directory info
         if track.directory_info and (track.directory_info.artist or track.directory_info.album):
             self.source_labels['directory'].setText(
-                f"Kataloog: {track.directory_info.artist or '?'} - {track.directory_info.album or '?'}"
+                f"{tr('source_directory')}: {track.directory_info.artist or '?'} - {track.directory_info.album or '?'}"
             )
         else:
-            self.source_labels['directory'].setText(f"Kataloog: {track.directory.name}")
+            self.source_labels['directory'].setText(f"{tr('source_directory')}: {track.directory.name}")
 
         # AcoustID info
         if track.acoustid_info and track.acoustid_info.artist:
             confidence = f"({track.acoustid_info.confidence:.0%})"
             self.source_labels['acoustid'].setText(
-                f"AcoustID: {track.acoustid_info.artist} - {track.acoustid_info.title or '?'} {confidence}"
+                f"{tr('source_acoustid')}: {track.acoustid_info.artist} - {track.acoustid_info.title or '?'} {confidence}"
             )
         else:
-            self.source_labels['acoustid'].setText("AcoustID: (pole tuvastatud)")
+            self.source_labels['acoustid'].setText(f"{tr('source_acoustid')}: {tr('not_detected')}")
 
     def _on_field_changed(self):
         """Handle field value change."""
@@ -271,3 +278,22 @@ class TagEditorWidget(QWidget):
         if self._current_track:
             return self._current_track.resolved_info
         return None
+
+    def update_translations(self):
+        """Update all translatable text."""
+        self.title_label.setText(tr('metadata'))
+        self.form_group.setTitle(tr('tag_info'))
+        self.artist_label.setText(tr('artist') + ":")
+        self.artist_edit.setPlaceholderText(tr('artist_placeholder'))
+        self.title_field_label.setText(tr('title') + ":")
+        self.title_edit.setPlaceholderText(tr('title_placeholder'))
+        self.album_label.setText(tr('album') + ":")
+        self.album_edit.setPlaceholderText(tr('album_placeholder'))
+        self.year_label.setText(tr('year') + ":")
+        self.year_spin.setSpecialValueText(tr('year_not_set'))
+        self.track_label.setText(tr('track') + ":")
+        self.genre_label.setText(tr('genre') + ":")
+        self.source_group.setTitle(tr('data_sources'))
+        self.reset_btn.setText(tr('reset'))
+        self.apply_btn.setText(tr('apply'))
+        self._update_source_info()
