@@ -26,6 +26,11 @@ A desktop application for managing MP3 file metadata and automatically fetching 
 
 - **Caching** - API responses are cached to speed up repeated lookups
 
+- **Bilingual Interface** - Full support for Estonian and English
+  - Language switcher in top-right corner
+  - Auto-detects system language on first run
+  - Switch languages without restarting
+
 ## Screenshots
 
 **Artwork Picker** - Choose from multiple artwork sources
@@ -139,6 +144,7 @@ mp3-albumart-tag-fixer/
 └── utils/               # Utilities
     ├── cache.py         # Disk caching
     ├── image_utils.py   # Image processing
+    ├── translations.py  # Bilingual support (ET/EN)
     └── validators.py    # Input validation
 ```
 
