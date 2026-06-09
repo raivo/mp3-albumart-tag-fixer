@@ -98,7 +98,7 @@ class TagEditorWidget(QWidget):
         self.genre_label = QLabel(tr('genre') + ":")
         self.form_layout.addRow(self.genre_label, self.genre_combo)
 
-        layout.addWidget(self.form_group)
+        layout.addWidget(self.form_group, stretch=1)
 
         # Source info
         self.source_group = QGroupBox(tr('data_sources'))
@@ -122,8 +122,6 @@ class TagEditorWidget(QWidget):
         button_layout.addWidget(self.reset_btn)
 
         layout.addLayout(button_layout)
-
-        layout.addStretch()
 
         # Initially disabled
         self.setEnabled(False)

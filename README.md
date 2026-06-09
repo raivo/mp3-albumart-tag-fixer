@@ -22,7 +22,7 @@ A desktop application for managing MP3 file metadata and automatically fetching 
 
 - **Conflict Resolution** - When multiple sources disagree, review and choose the correct metadata
 
-- **Preview Changes** - See all proposed changes before applying them
+- **Preview Changes** - See all proposed changes before saving them
 
 - **Caching** - API responses are cached to speed up repeated lookups
 
