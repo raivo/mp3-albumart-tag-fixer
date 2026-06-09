@@ -94,7 +94,7 @@ class MP3Tagger:
     @staticmethod
     def write_tags(track: Track) -> None:
         """Write tags to an MP3 file."""
-        if track.resolved_info is None:
+        if track.resolved_info is None and not track.new_artwork:
             return
 
         file_path = track.file_path
@@ -113,30 +113,30 @@ class MP3Tagger:
             tags = audio.tags
 
             # Title
-            if info.title:
+            if info and info.title:
                 tags['TIT2'] = TIT2(encoding=3, text=info.title)
 
             # Artist
-            if info.artist:
+            if info and info.artist:
                 tags['TPE1'] = TPE1(encoding=3, text=info.artist)
 
             # Album
-            if info.album:
+            if info and info.album:
                 tags['TALB'] = TALB(encoding=3, text=info.album)
 
             # Year
-            if info.year:
+            if info and info.year:
                 tags['TDRC'] = TDRC(encoding=3, text=str(info.year))
 
             # Track number
-            if info.track_number:
+            if info and info.track_number:
                 track_str = str(info.track_number)
                 if info.total_tracks:
                     track_str = f"{info.track_number}/{info.total_tracks}"
                 tags['TRCK'] = TRCK(encoding=3, text=track_str)
 
             # Genre
-            if info.genre:
+            if info and info.genre:
                 tags['TCON'] = TCON(encoding=3, text=info.genre)
 
             # Artwork

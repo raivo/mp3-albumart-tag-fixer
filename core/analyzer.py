@@ -138,7 +138,7 @@ class TrackAnalyzer:
 
     def apply_changes(self, track: Track) -> bool:
         """Apply resolved changes to the MP3 file."""
-        if not track.has_changes or track.resolved_info is None:
+        if not track.has_changes:
             return False
 
         try:
@@ -151,24 +151,23 @@ class TrackAnalyzer:
 
     def preview_changes(self, track: Track) -> dict:
         """Get a preview of changes that would be applied."""
-        if track.resolved_info is None:
-            return {}
-
         changes = {}
-        old_info = track.tag_info or TrackInfo()
-        new_info = track.resolved_info
 
-        for field in ['artist', 'album', 'title', 'year', 'track_number', 'genre']:
-            old_val = getattr(old_info, field)
-            new_val = getattr(new_info, field)
+        if track.resolved_info is not None:
+            old_info = track.tag_info or TrackInfo()
+            new_info = track.resolved_info
 
-            if old_val != new_val:
-                changes[field] = {
-                    'old': old_val,
-                    'new': new_val
-                }
+            for field in ['artist', 'album', 'title', 'year', 'track_number', 'genre']:
+                old_val = getattr(old_info, field)
+                new_val = getattr(new_info, field)
 
-        # Check artwork
+                if old_val != new_val:
+                    changes[field] = {
+                        'old': old_val,
+                        'new': new_val
+                    }
+
+        # Check artwork regardless of resolved_info
         if track.new_artwork and track.new_artwork != track.current_artwork:
             changes['artwork'] = {
                 'old': 'Exists' if track.current_artwork else 'None',

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLineEdit, QScrollArea, QWidget,
     QGridLayout, QFrame, QProgressBar, QMessageBox
 )
-from PySide6.QtCore import Qt, Signal, QThread, QObject, QTimer
+from PySide6.QtCore import Qt, Signal, QThread, QObject, QTimer, QRunnable, QThreadPool
 from PySide6.QtGui import QPixmap, QImage
 
 from artwork.fetcher import ArtworkFetcher
@@ -64,6 +64,33 @@ class SearchWorker(QObject):
                 self.error.emit(str(e))
 
 
+class ThumbnailLoader(QRunnable):
+    """Loads a single thumbnail in the thread pool."""
+
+    class Signals(QObject):
+        loaded = Signal(int, bytes)  # (loader_id, data)
+        failed = Signal(int)         # (loader_id,)
+
+    def __init__(self, loader_id: int, fetcher: ArtworkFetcher, result: ArtworkResult):
+        super().__init__()
+        self.loader_id = loader_id
+        self.fetcher = fetcher
+        self.result = result
+        self.signals = ThumbnailLoader.Signals()
+        # setAutoDelete(False) so Python keeps ownership and signals stay alive
+        self.setAutoDelete(False)
+
+    def run(self):
+        try:
+            data = self.fetcher.get_thumbnail(self.result)
+            if data:
+                self.signals.loaded.emit(self.loader_id, data)
+            else:
+                self.signals.failed.emit(self.loader_id)
+        except Exception:
+            self.signals.failed.emit(self.loader_id)
+
+
 class ArtworkPickerDialog(QDialog):
     """Dialog for searching and selecting album artwork."""
 
@@ -79,6 +106,10 @@ class ArtworkPickerDialog(QDialog):
 
         self._search_thread: Optional[QThread] = None
         self._search_worker: Optional[SearchWorker] = None
+        self._search_generation: int = 0  # incremented on each new search
+        self._active_loaders: dict[int, ThumbnailLoader] = {}  # keep loaders alive
+        self._loader_id_to_generation: dict[int, int] = {}
+        self._next_loader_id: int = 0
 
         self._setup_ui()
 
@@ -244,11 +275,13 @@ class ArtworkPickerDialog(QDialog):
         self._search_thread = QThread()
         self._search_worker = SearchWorker(self.fetcher, artist, album)
         self._search_worker.moveToThread(self._search_thread)
+        active_worker = self._search_worker  # capture for closure check
 
         # Connect signals with queued connection for thread safety
         self._search_thread.started.connect(self._search_worker.run)
         self._search_worker.finished.connect(
-            self._on_search_finished, Qt.ConnectionType.QueuedConnection
+            lambda results, w=active_worker: self._on_search_finished(results, w),
+            Qt.ConnectionType.QueuedConnection
         )
         self._search_worker.progress.connect(
             self._on_progress, Qt.ConnectionType.QueuedConnection
@@ -273,10 +306,7 @@ class ArtworkPickerDialog(QDialog):
 
         if self._search_thread and self._search_thread.isRunning():
             self._search_thread.quit()
-            # Wait with timeout to avoid blocking forever
-            if not self._search_thread.wait(2000):  # 2 second timeout
-                self._search_thread.terminate()
-                self._search_thread.wait()
+            self._search_thread.wait(3000)  # Wait up to 3s; don't force-terminate
 
         self._search_thread = None
         self._search_worker = None
@@ -286,9 +316,12 @@ class ArtworkPickerDialog(QDialog):
         # Clean up references
         pass
 
-    def _on_search_finished(self, results):
+    def _on_search_finished(self, results, worker=None):
         """Handle search completion."""
         if self._is_closed:
+            return
+        # Ignore results from a superseded search
+        if worker is not None and worker is not self._search_worker:
             return
 
         self.progress_bar.hide()
@@ -313,6 +346,11 @@ class ArtworkPickerDialog(QDialog):
         """Display search results."""
         if self._is_closed:
             return
+
+        # Invalidate any pending thumbnail loaders from previous search
+        self._search_generation += 1
+        self._active_loaders.clear()
+        self._loader_id_to_generation.clear()
 
         # Clear previous results
         while self.results_layout.count():
@@ -350,17 +388,11 @@ class ArtworkPickerDialog(QDialog):
         thumb_label.setStyleSheet("background-color: #f0f0f0;")
 
         if thumb_data:
-            image = QImage.fromData(thumb_data)
-            if not image.isNull():
-                pixmap = QPixmap.fromImage(image).scaled(
-                    130, 130,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                thumb_label.setPixmap(pixmap)
+            self._set_thumb_pixmap(thumb_label, thumb_data)
         else:
-            thumb_label.setText("Laen...")
-            thumb_label.setStyleSheet("color: gray; background-color: #f0f0f0;")
+            thumb_label.setText("⏳")
+            thumb_label.setStyleSheet("color: gray; background-color: #f0f0f0; font-size: 32px;")
+            self._load_thumbnail_async(result, thumb_label, self._search_generation)
 
         layout.addWidget(thumb_label)
 
@@ -374,6 +406,70 @@ class ArtworkPickerDialog(QDialog):
         frame.mousePressEvent = lambda e, idx=index, f=frame: self._on_result_clicked(idx, f)
 
         return frame
+
+    def _set_thumb_pixmap(self, thumb_label, data: bytes):
+        """Set pixmap on a thumbnail label."""
+        image = QImage.fromData(data)
+        if not image.isNull():
+            pixmap = QPixmap.fromImage(image).scaled(
+                130, 130,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            thumb_label.setPixmap(pixmap)
+            thumb_label.setStyleSheet("background-color: #f0f0f0;")
+        else:
+            thumb_label.setText("✗")
+            thumb_label.setStyleSheet("color: #aaa; background-color: #f0f0f0; font-size: 32px;")
+
+    def _load_thumbnail_async(self, result: ArtworkResult, thumb_label, generation: int):
+        """Schedule async thumbnail load via thread pool."""
+        if self._is_closed:
+            return
+        loader_id = self._next_loader_id
+        self._next_loader_id += 1
+        loader = ThumbnailLoader(loader_id, self.fetcher, result)
+        loader.signals.loaded.connect(self._on_thumb_loaded, Qt.ConnectionType.QueuedConnection)
+        loader.signals.failed.connect(self._on_thumb_failed, Qt.ConnectionType.QueuedConnection)
+        # Keep strong references so Python GC doesn't collect loader/signals before signals fire
+        self._active_loaders[loader_id] = loader
+        self._loader_id_to_generation[loader_id] = generation
+        # Store thumb_label on the dialog indexed by loader_id (no reference passed to thread)
+        setattr(self, f'_thumb_{loader_id}', thumb_label)
+        QThreadPool.globalInstance().start(loader)
+
+    def _on_thumb_loaded(self, loader_id: int, data: bytes):
+        if self._is_closed:
+            return
+        # Ignore if the search generation has changed (results were cleared)
+        if self._loader_id_to_generation.get(loader_id) != self._search_generation:
+            self._active_loaders.pop(loader_id, None)
+            return
+        thumb_label = getattr(self, f'_thumb_{loader_id}', None)
+        self._active_loaders.pop(loader_id, None)
+        if thumb_label is None:
+            return
+        try:
+            self._set_thumb_pixmap(thumb_label, data)
+        except RuntimeError:
+            pass  # C++ widget already deleted
+
+    def _on_thumb_failed(self, loader_id: int):
+        if self._is_closed:
+            self._active_loaders.pop(loader_id, None)
+            return
+        if self._loader_id_to_generation.get(loader_id) != self._search_generation:
+            self._active_loaders.pop(loader_id, None)
+            return
+        thumb_label = getattr(self, f'_thumb_{loader_id}', None)
+        self._active_loaders.pop(loader_id, None)
+        if thumb_label is None:
+            return
+        try:
+            thumb_label.setText("✗")
+            thumb_label.setStyleSheet("color: #aaa; background-color: #f0f0f0; font-size: 32px;")
+        except RuntimeError:
+            pass  # C++ widget already deleted
 
     def _on_result_clicked(self, index: int, frame: QFrame):
         """Handle result click."""

@@ -121,11 +121,6 @@ class TagEditorWidget(QWidget):
         self.reset_btn.clicked.connect(self._on_reset)
         button_layout.addWidget(self.reset_btn)
 
-        self.apply_btn = QPushButton(tr('apply'))
-        self.apply_btn.clicked.connect(self._on_apply)
-        self.apply_btn.setStyleSheet("background-color: #4CAF50; color: white;")
-        button_layout.addWidget(self.apply_btn)
-
         layout.addLayout(button_layout)
 
         layout.addStretch()
@@ -268,11 +263,6 @@ class TagEditorWidget(QWidget):
             self._update_fields()
             self.tags_changed.emit(self._current_track)
 
-    def _on_apply(self):
-        """Emit signal that tags should be applied."""
-        if self._current_track:
-            self.tags_changed.emit(self._current_track)
-
     def get_current_info(self) -> Optional[TrackInfo]:
         """Get the current edited info."""
         if self._current_track:
@@ -295,5 +285,4 @@ class TagEditorWidget(QWidget):
         self.genre_label.setText(tr('genre') + ":")
         self.source_group.setTitle(tr('data_sources'))
         self.reset_btn.setText(tr('reset'))
-        self.apply_btn.setText(tr('apply'))
         self._update_source_info()

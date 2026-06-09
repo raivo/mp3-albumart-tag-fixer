@@ -276,8 +276,9 @@ class DirectoryView(QWidget):
         if not self._current_album:
             return
 
-        artist = self._current_album.artist or ""
-        album = self._current_album.album_name or ""
+        # Read current values from tag editor (reflects user edits, not stale album metadata)
+        artist = self.tag_editor.artist_edit.text().strip() or self._current_album.artist or ""
+        album = self.tag_editor.album_edit.text().strip() or self._current_album.album_name or ""
 
         # Get title from selected track if available
         title = ""
